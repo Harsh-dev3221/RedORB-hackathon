@@ -40,7 +40,7 @@ Rules:
 """
 
 
-def compile_jd(jd_text: str, model: str = "gemini-2.5-pro") -> str:
+def compile_jd(jd_text: str, model: str = "gemini-2.5-flash") -> str:
     from google import genai
 
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
@@ -56,7 +56,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--jd", required=True)
     ap.add_argument("--out", default="artifacts/generated")
-    ap.add_argument("--model", default="gemini-2.5-pro")
+    ap.add_argument("--model", default="gemini-2.5-flash")
     args = ap.parse_args()
     jd_text = Path(args.jd).read_text(encoding="utf-8")
     out_dir = Path(args.out)

@@ -52,6 +52,11 @@ probe/predicate embeddings        evidence-grounded reasoning → CSV
 | `rank.py` | The ranking step (Stage-3 reproduced command) |
 | `precompute.py` | Offline artifact builder (embeddings, ledger, probes) |
 | `search.py` | Recruiter-style multi-role search surface over the same artifacts |
+| `ingest.py` | **Incremental upload**: new candidates → embed only the delta → searchable in seconds, no rebuild (atomic in-place append; `--replace` upserts; `--format text` parses raw resumes via Gemini) |
+| `explain.py` | Per-candidate verdict breakdown: every rule × weight, fired evidence sentences, flags — the recruiter-trust surface |
+| `api.py` | REST surface (`/search`, `/ingest`, `/explain`, `/rank`, `/healthz`) — the hosted-sandbox demo app (`uvicorn api:app`) |
+| `scripts/build_probes.py` | **Rank a brand-new JD without re-embedding**: candidate vectors are JD-agnostic; only the ~50 probe vectors depend on the rubric (seconds to rebuild) |
+| `src/verdict/resume_parser.py` | Gemini raw-resume → candidate-schema JSON (ingest-time only, never rank-time) |
 | `src/verdict/normalizer.py` | Entity standardization: titles, skills ontology, companies, locations |
 | `src/verdict/evidence.py` | L1 claim ledger: timelines, corroboration, evidence sentences |
 | `src/verdict/credibility.py` | L2: contradiction detection, stuffing signature → C |
