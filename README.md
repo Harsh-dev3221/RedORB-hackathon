@@ -57,6 +57,10 @@ probe/predicate embeddings        evidence-grounded reasoning → CSV
 | `api.py` | REST surface (`/search`, `/ingest`, `/explain`, `/rank`, `/healthz`) — the hosted-sandbox demo app (`uvicorn api:app`) |
 | `scripts/build_probes.py` | **Rank a brand-new JD without re-embedding**: candidate vectors are JD-agnostic; only the ~50 probe vectors depend on the rubric (seconds to rebuild) |
 | `src/verdict/resume_parser.py` | Gemini raw-resume → candidate-schema JSON (ingest-time only, never rank-time) |
+| `rubric_diff.py` | Compare two rubric versions' top-N: who entered/dropped/moved and **which rule contribution explains each move** — the recruiter-feedback loop made auditable |
+| `dossier.py` | Shortlist export: top-N as a markdown pack with each candidate's full evidence breakdown — what a recruiter forwards to a hiring manager |
+| `drift_monitor.py` | `record`/`check` score-distribution snapshots over a deterministic 2% sample; PSI > 0.25 ⇒ "rebuild probes + recalibrate floors" alert |
+| `src/verdict/twins.py` | Upload-time near-duplicate detection (narrative cosine + behavioral-telemetry match), wired into `ingest.py` (`--dry-run` validates, `--strict` rejects) |
 | `src/verdict/normalizer.py` | Entity standardization: titles, skills ontology, companies, locations |
 | `src/verdict/evidence.py` | L1 claim ledger: timelines, corroboration, evidence sentences |
 | `src/verdict/credibility.py` | L2: contradiction detection, stuffing signature → C |

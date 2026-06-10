@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from verdict.data import iter_candidates
 from verdict.embedder import DIM, embed_passages, get_model
-from verdict.evidence import build_record, record_to_dict
+from verdict.evidence import build_record, record_from_dict, record_to_dict
 
 ART = Path(__file__).parent / "artifacts"
 
@@ -57,6 +57,12 @@ def main() -> None:
                     help="upsert: replace candidates whose ids already exist")
     ap.add_argument("--cuda", action="store_true")
     ap.add_argument("--threads", type=int, default=8)
+    ap.add_argument("--dry-run", action="store_true",
+                    help="validate + twin-check the upload without writing anything")
+    ap.add_argument("--strict", action="store_true",
+                    help="reject the whole upload if any twin is detected")
+    ap.add_argument("--skip-twins", action="store_true",
+                    help="skip near-duplicate detection (faster for trusted bulk loads)")
     args = ap.parse_args()
     t0 = time.time()
 
@@ -113,6 +119,33 @@ def main() -> None:
                 new_means[i] = (m / n).astype(np.float16)
         off += k
     print(f"embedded {len(new_sentences)} sentences for {len(new_records)} candidates")
+
+    # ---- upload-time twin detection (fraud-resistance at the door) ----
+    n_twins = 0
+    if not args.skip_twins:
+        from verdict.twins import find_twins
+
+        index_records = []
+        with gzip.open(ART / "records.jsonl.gz", "rb") as f:
+            for line in f:
+                if line.strip():
+                    index_records.append(record_from_dict(orjson.loads(line)))
+        twin_flags = find_twins(new_records, new_means, ids, means, index_records)
+        for rec, tf in zip(new_records, twin_flags):
+            if not tf:
+                continue
+            n_twins += 1
+            for t in tf:
+                # lands in the stored ledger -> credibility engine dings it at rank time
+                if not (args.replace and rec.candidate_id in dups
+                        and rec.candidate_id in t):
+                    rec.suspicions.append(t)
+                print(f"  TWIN {rec.candidate_id}: {t}")
+        if n_twins and args.strict:
+            raise SystemExit(f"strict mode: rejected upload - {n_twins} twin candidate(s)")
+    if args.dry_run:
+        print(f"dry run: {len(new_records)} candidates validated, {n_twins} twin(s); nothing written")
+        return
 
     # ---- drop superseded rows on upsert ----
     if dups:

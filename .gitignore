@@ -17,6 +17,7 @@ artifacts/sent_counts.npy
 artifacts/candidate_ids.txt
 artifacts/probes.npz
 artifacts/generated/
+artifacts/drift_log.jsonl
 artifacts_ai20k_backup_*/
 output/
 
