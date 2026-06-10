@@ -137,6 +137,39 @@ def split_sentences(text: str) -> list[str]:
     return [s.strip() for s in _SENT_SPLIT.split(text or "") if len(s.strip()) >= 25]
 
 
+# Lexical evidence guards. Embeddings ignore negation and reward bare keyword
+# lists, so aspirational sentences ("eager to learn embeddings...") and tool
+# enumerations without a doing-verb are excluded from PREDICATE evidence.
+# They stay in narrative_text (BM25 recall) - they just can't prove anything.
+_ASPIRATIONAL = re.compile(
+    r"\b(eager|hoping|aspiring|aiming|planning|wanting|looking|keen)\s+to\s+"
+    r"(learn|transition|move|break into|upskill|grow into|pivot)"
+    r"|\bhave not (yet )?(worked|used|done)"
+    r"|\bno (prior|professional|production|hands.on) experience"
+    r"|\binterested in (learning|transitioning|moving into)"
+    r"|\bwould (love|like) to (learn|work on)",
+    re.I,
+)
+_DOING_VERB = re.compile(
+    r"\b(built|build|shipped|ship|deployed|deploy|designed|developed|implemented|"
+    r"led|owned|own|created|launched|migrated|maintained|operated|ran|optimi[sz]ed|"
+    r"architected|integrated|automated|scaled|reduced|improved)\b",
+    re.I,
+)
+
+
+def is_evidence_grade(sentence: str) -> bool:
+    """A sentence can serve as predicate evidence only if it describes work
+    actually done - not aspiration, and not a bare tool list."""
+    if _ASPIRATIONAL.search(sentence):
+        return False
+    commas = sentence.count(",")
+    words = len(sentence.split())
+    if commas >= 4 and commas / max(words, 1) > 0.18 and not _DOING_VERB.search(sentence):
+        return False
+    return True
+
+
 def _evidence_score(sentence: str) -> float:
     toks = _WORD.findall(sentence.lower())
     score = 0.0
@@ -302,7 +335,7 @@ def build_record(c: dict, ref_year: int = 2026) -> LedgerRecord:
     summary = p.get("summary", "") or ""
     narrative_parts.append(summary)
     sentences.extend(split_sentences(summary))
-    rec.sentences = select_evidence_sentences(sentences)
+    rec.sentences = select_evidence_sentences([s for s in sentences if is_evidence_grade(s)])
     rec.narrative_text = " ".join(narrative_parts).lower()
 
     rec.yoe_timeline = round(total_months / 12.0, 2)
@@ -335,14 +368,16 @@ def build_record(c: dict, ref_year: int = 2026) -> LedgerRecord:
         canon, _cat = normalize_skill(k)
         rec.assessment_scores[canon] = float(v)
 
-    narrative = rec.narrative_text
+    # corroboration text = evidence-grade sentences ONLY: stuffed keyword lists
+    # and aspirational mentions in the narrative must not corroborate anything
+    corro_text = " ".join(rec.sentences).lower()
     for s in c.get("skills") or []:
         canon, cat = normalize_skill(s.get("name", ""))
         months = int(s.get("duration_months") or 0)
         prof = s.get("proficiency", "beginner")
-        # corroboration: alias text in narrative OR platform assessment >= 60
+        # corroboration: alias text in evidence-grade narrative OR assessment >= 60
         in_text = bool(canon) and (
-            canon.replace("-", " ") in narrative or canon in narrative
+            canon.replace("-", " ") in corro_text or canon in corro_text
         )
         assessed = rec.assessment_scores.get(canon, -1.0) >= 60.0
         corroborated = in_text or assessed

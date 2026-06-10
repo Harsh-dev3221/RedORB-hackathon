@@ -202,7 +202,7 @@ def main() -> None:
     credibility = []
     all_concerns = []
     for rec in subset:
-        c, cflags = score_credibility(rec)
+        c, cflags = score_credibility(rec, rubric.get("credibility"))
         a, aflags = _availability_score(rec, rubric, args.availability)
         credibility.append(c)
         avail.append(a)

@@ -17,8 +17,13 @@ _NONTECH_FAMILIES = {"marketing", "hr", "sales", "design", "finance", "ops", "an
                      "pm", "product", "other"}
 
 
-def score_credibility(rec: LedgerRecord) -> tuple[float, list[str]]:
-    """Return (C, flags). Flags are short audit strings used in reasoning."""
+def score_credibility(rec: LedgerRecord, cfg: dict | None = None) -> tuple[float, list[str]]:
+    """Return (C, flags). Flags are short audit strings used in reasoning.
+
+    cfg = rubric["credibility"] enables the verified-evidence rule: coherent
+    narrative is free to fabricate (LLM era), so without ANY hard evidence
+    (platform assessments or linked GitHub) C is dampened and capped.
+    """
     c = 1.0
     flags: list[str] = []
 
@@ -64,5 +69,16 @@ def score_credibility(rec: LedgerRecord) -> tuple[float, list[str]]:
         if med_mo <= 6:
             c *= 0.7
             flags.append(f"BREADTH_NO_DEPTH: {rec.n_skills} skills, median {med_mo} months each")
+
+    # verified-evidence rule: narrative coherence alone no longer earns full trust
+    if cfg:
+        gh = float(rec.signals.get("github_activity_score", -1)) if rec.signals else -1.0
+        has_hard_evidence = bool(rec.assessment_scores) or gh >= 0
+        if not has_hard_evidence:
+            c = min(c * cfg["unverified_factor"], cfg["unverified_cap"])
+            flags.append(
+                "UNVERIFIED_PROFILE: no platform assessments and no linked GitHub - "
+                "narrative claims cannot be independently corroborated"
+            )
 
     return max(c, 0.001), flags

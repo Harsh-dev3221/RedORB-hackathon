@@ -63,7 +63,9 @@
         "developed a recommendation engine serving millions of users",
         "improved search relevance and ranking quality for a consumer product",
         "deployed a learning to rank model for personalized search results",
-        "designed and launched a matching system that ranks items or people for users"
+        "designed and launched a matching system that ranks items or people for users",
+        "built the system that decides which items or products users see first when they browse",
+        "owned the logic that orders the results people see when they look for something in the app"
       ],
       "explain": "JD ideal: 'shipped at least one end-to-end ranking, search, or recommendation system to real users at meaningful scale'"
     },
@@ -74,7 +76,9 @@
         "built a vector search pipeline with FAISS or a vector database serving live traffic",
         "implemented dense retrieval with sentence transformer embeddings for real users",
         "operated and refreshed a vector index in a production search system",
-        "built hybrid retrieval combining BM25 keyword search with dense embeddings"
+        "built hybrid retrieval combining BM25 keyword search with dense embeddings",
+        "converted text into numerical vector form so the system finds similar items even when the words differ",
+        "matched what users type to catalog items by meaning instead of exact keyword match"
       ],
       "explain": "JD absolute need: production experience with embeddings-based retrieval and vector databases"
     },
@@ -83,7 +87,9 @@
       "positives": [
         "designed offline evaluation with NDCG MRR or MAP for ranking quality",
         "ran A/B tests to measure search relevance and ranking improvements",
-        "built an evaluation framework and metrics for a recommender system"
+        "built an evaluation framework and metrics for a recommender system",
+        "ran controlled experiments with a share of users to measure whether the new result ordering helped them find what they wanted",
+        "tracked how often users clicked one of the first few results to judge quality of the ordering"
       ],
       "explain": "JD absolute need: hands-on evaluation frameworks for ranking systems"
     },
@@ -112,6 +118,11 @@
       ],
       "explain": "nice-to-have: LLM fine-tuning (LoRA/QLoRA/PEFT)"
     }
+  },
+  "credibility": {
+    "unverified_factor": 0.75,
+    "unverified_cap": 0.85,
+    "explain": "2026 reality: LLMs made coherent narrative free to fabricate, so narrative coherence alone no longer earns full trust. Without ANY hard evidence (platform assessment scores or a linked GitHub), C is dampened and capped so narrative-only profiles cannot outrank assessed ones. Verified platform telemetry remains costly to fake."
   },
   "predicate_negatives": [
     "completed an online course and earned a certification",

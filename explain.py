@@ -64,7 +64,7 @@ def main() -> None:
     pred_vecs = {p: probes[f"pred_{p}"].astype(np.float32) for p in rubric["fuzzy_predicates"]}
     preds = predicate_scores(sv, pred_vecs, neg, rubric["predicate_scoring"])
     j, rules, notes, dnotes = judge(rec, preds, rubric)
-    c, cflags = score_credibility(rec)
+    c, cflags = score_credibility(rec, rubric.get("credibility"))
     a, aflags = score_availability(rec, rubric)
     f = rubric["fusion"]
     fused = math.exp(

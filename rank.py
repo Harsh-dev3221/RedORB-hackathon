@@ -118,7 +118,7 @@ def main() -> None:
         sv = sent_vecs[offsets[pi] : offsets[pi + 1]].astype(np.float32)
         preds = predicate_scores(sv, pred_vecs, neg, pcfg)
         j, rules, notes, dnotes = judge(rec, preds, rubric)
-        c_score, c_flags = score_credibility(rec)
+        c_score, c_flags = score_credibility(rec, rubric.get("credibility"))
         a_score, a_flags = score_availability(rec, rubric)
         scored.append(
             Scored(

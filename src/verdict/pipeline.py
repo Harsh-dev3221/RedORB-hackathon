@@ -66,7 +66,7 @@ def score_candidate(idx: Index, i: int, rubric: dict, probes: dict) -> Scored:
     pred_vecs = {pid: probes[f"pred_{pid}"] for pid in rubric["fuzzy_predicates"]}
     preds = predicate_scores(sv, pred_vecs, probes["neg"], rubric["predicate_scoring"])
     j, rules, notes, dnotes = judge(rec, preds, rubric)
-    c, cflags = score_credibility(rec)
+    c, cflags = score_credibility(rec, rubric.get("credibility"))
     a, aflags = score_availability(rec, rubric)
     return Scored(idx=i, candidate_id=rec.candidate_id, j=j, c=c, a=a,
                   rule_scores=rules, evidence_notes=notes, dampener_notes=dnotes,
