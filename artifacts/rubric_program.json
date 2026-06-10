@@ -1,0 +1,167 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "role": "Senior AI Engineer - Founding Team, Redrob AI",
+    "compiled_from": "job_description.docx",
+    "compiler": "LLM-assisted (offline), human-reviewed",
+    "ref_date": "2026-06-01"
+  },
+  "gates": {
+    "min_career_entries": 1,
+    "yoe_min": 2.0,
+    "yoe_max": 15.0,
+    "reject_abroad_without_relocation": true
+  },
+  "crisp_rules": {
+    "yoe_fit": {
+      "weight": 0.08,
+      "trapezoid": [4.0, 5.0, 9.0, 12.0],
+      "explain": "JD band 5-9 yrs, 'a range not a requirement' - soft shoulders"
+    },
+    "core_title_family": {
+      "weight": 0.10,
+      "core_families": ["ml_engineer", "applied_scientist", "nlp_engineer", "search_engineer", "data_scientist", "mlops_engineer"],
+      "adjacent_families": ["data_engineer", "backend", "swe", "fullstack"],
+      "adjacent_score": 0.45,
+      "explain": "current/recent role in applied ML/IR; adjacent eng roles partial credit"
+    },
+    "product_company_tenure": {
+      "weight": 0.10,
+      "explain": "share of career months at product companies (JD: 4-5 yrs applied ML at product companies, not services)"
+    },
+    "trajectory": {
+      "weight": 0.04,
+      "explain": "seniority slope >= 0 across roles; ascending careers preferred"
+    },
+    "stability": {
+      "weight": 0.04,
+      "full_at_months": 30,
+      "explain": "median tenure; JD wants 3+ year commitment"
+    },
+    "location_fit": {
+      "weight": 0.05,
+      "scores": {"preferred": 1.0, "tier1": 0.85, "india_other": 0.55, "abroad": 0.25},
+      "relocator_bonus": 0.25,
+      "explain": "Pune/Noida preferred; Tier-1 welcome; relocation counts"
+    },
+    "external_validation": {
+      "weight": 0.05,
+      "explain": "github_activity_score as open-source/external-validation proxy; -1 (no GitHub) = neutral 0.5, never punished as zero"
+    },
+    "core_skill_coverage": {
+      "weight": 0.10,
+      "core_categories": ["embeddings", "vector_db", "search", "ranking", "llm", "nlp", "ml_core"],
+      "corroborated_only": true,
+      "explain": "share of core JD skill categories with CORROBORATED evidence (narrative or assessment) - the skills list alone never scores"
+    }
+  },
+  "fuzzy_predicates": {
+    "shipped_search_ranking_reco": {
+      "weight": 0.14,
+      "positives": [
+        "built and shipped a search ranking system used by real users in production",
+        "developed a recommendation engine serving millions of users",
+        "improved search relevance and ranking quality for a consumer product",
+        "deployed a learning to rank model for personalized search results",
+        "designed and launched a matching system that ranks items or people for users"
+      ],
+      "explain": "JD ideal: 'shipped at least one end-to-end ranking, search, or recommendation system to real users at meaningful scale'"
+    },
+    "production_embeddings_retrieval": {
+      "weight": 0.12,
+      "positives": [
+        "deployed embeddings based semantic retrieval in production",
+        "built a vector search pipeline with FAISS or a vector database serving live traffic",
+        "implemented dense retrieval with sentence transformer embeddings for real users",
+        "operated and refreshed a vector index in a production search system",
+        "built hybrid retrieval combining BM25 keyword search with dense embeddings"
+      ],
+      "explain": "JD absolute need: production experience with embeddings-based retrieval and vector databases"
+    },
+    "ranking_evaluation": {
+      "weight": 0.08,
+      "positives": [
+        "designed offline evaluation with NDCG MRR or MAP for ranking quality",
+        "ran A/B tests to measure search relevance and ranking improvements",
+        "built an evaluation framework and metrics for a recommender system"
+      ],
+      "explain": "JD absolute need: hands-on evaluation frameworks for ranking systems"
+    },
+    "ml_production_scale": {
+      "weight": 0.05,
+      "positives": [
+        "deployed machine learning models serving high traffic in production at scale",
+        "built ML pipelines with monitoring retraining and alerting in production",
+        "optimized model inference latency for large scale production serving"
+      ],
+      "explain": "production ML engineering maturity"
+    },
+    "nlp_ir_depth": {
+      "weight": 0.03,
+      "positives": [
+        "built NLP systems such as text classification entity extraction or query understanding in production",
+        "worked on information retrieval and text search systems before large language models became popular"
+      ],
+      "explain": "JD: 'understood retrieval and ranking before it became fashionable'"
+    },
+    "llm_production": {
+      "weight": 0.02,
+      "positives": [
+        "fine-tuned large language models with LoRA or PEFT for a production use case",
+        "built LLM powered features with retrieval augmented generation deployed to users"
+      ],
+      "explain": "nice-to-have: LLM fine-tuning (LoRA/QLoRA/PEFT)"
+    }
+  },
+  "predicate_negatives": [
+    "completed an online course and earned a certification",
+    "wrote a tutorial blog post about a popular framework",
+    "managed project timelines stakeholders and team communication",
+    "designed marketing campaigns and social media content",
+    "prepared dashboards and business reports for management review",
+    "developed responsive web user interfaces with React and CSS",
+    "built mobile applications for Android and iOS",
+    "managed financial accounting ledgers and reporting",
+    "created visual designs logos and brand assets",
+    "recruited candidates scheduled interviews and managed HR processes",
+    "wrote and executed manual test cases for application releases",
+    "maintained servers networks and IT support infrastructure",
+    "supervised construction site work and civil engineering projects",
+    "designed mechanical components using CAD modelling"
+  ],
+  "predicate_scoring": {
+    "sim_floor": 0.07,
+    "sim_full": 0.16,
+    "neg_margin": 1.0,
+    "top_k_sentences": 3,
+    "explain": "predicate = scaled( max-over-sentences( cos_pos - cos_nearest_negative ) ); BGE raw cosines have a ~0.6 floor for ANY pair, so only the contrastive margin separates signal from noise. floor/full calibrated on sample distribution (noise p90 ~ +0.05, genuine evidence > +0.10)"
+  },
+  "dampeners": {
+    "research_only": {"factor": 0.05, "explain": "JD explicit: pure research career without production deployment - will not move forward"},
+    "services_only": {"factor": 0.10, "explain": "JD explicit: consulting-firms-only careers (TCS/Infosys/Wipro/...) screened out"},
+    "title_hopper": {"factor": 0.60, "median_tenure_below_mo": 18, "min_jobs": 3, "explain": "JD explicit: title-chasers switching every ~1.5 years"},
+    "manager_no_code": {"factor": 0.45, "director_factor": 0.25, "explain": "JD explicit: architecture/lead roles with no production code in 18 months - this role writes code"},
+    "cv_speech_only": {"factor": 0.25, "explain": "JD explicit: CV/speech/robotics expertise without NLP/IR exposure"},
+    "framework_only_ai": {"factor": 0.35, "explain": "JD explicit: recent LangChain-only AI experience without pre-LLM ML production depth"}
+  },
+  "abm": {
+    "families": ["ml_engineer", "applied_scientist", "nlp_engineer", "search_engineer", "data_scientist", "mlops_engineer"],
+    "min_corroborated_core_categories": 2,
+    "core_categories": ["embeddings", "vector_db", "search", "ranking", "llm", "nlp", "ml_core"]
+  },
+  "bm25_query": "machine learning engineer embeddings retrieval vector search ranking recommendation relevance semantic search production deployed NLP information retrieval LLM fine-tuning evaluation NDCG A/B testing Python recommender personalization",
+  "recall": {"rrf_k": 60, "recall_top": 2500},
+  "availability": {
+    "weights": {"engagement": 0.35, "responsiveness": 0.35, "logistics": 0.22, "corroboration": 0.08},
+    "location_scores": {"preferred": 1.0, "tier1": 0.9, "india_other": 0.6, "abroad": 0.35, "relocator": 0.75},
+    "salary_band_lpa": [25, 65]
+  },
+  "fusion": {
+    "alpha": 1.0,
+    "beta": 0.7,
+    "gamma": 0.5,
+    "head_size": 300,
+    "tournament_blend": 0.3,
+    "final_size": 100
+  }
+}

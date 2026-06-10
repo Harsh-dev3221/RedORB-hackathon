@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "purpose": "HyRE-style recall probes (ConFit v2). Ideal personas widen dense recall; anti personas are reserved for analysis and are NEVER used to score candidates.",
+    "compiler": "LLM-assisted (offline), human-reviewed"
+  },
+  "ideal": [
+    "Senior machine learning engineer with 7 years of experience. Built and shipped an embeddings-based semantic search system at a product company, handling index refresh, embedding drift and retrieval quality regressions in production. Strong Python. Designed offline evaluation with NDCG and MRR and ran A/B tests with recruiters and end users.",
+    "Applied ML engineer, 6 years at consumer internet companies. Shipped a recommendation engine serving millions of users, moved ranking from rule-based scoring to a hybrid BM25 plus dense retrieval architecture with a learning-to-rank reranker. Owns evaluation infrastructure and online experimentation.",
+    "Search relevance engineer with 8 years of experience across e-commerce and marketplace products. Deep hands-on work with Elasticsearch, vector databases like FAISS and Qdrant, query understanding, and semantic matching. Mentors junior engineers while still writing production code daily.",
+    "NLP engineer, 6 years, built text classification, entity extraction and query understanding systems in production before the LLM era, then integrated large language models with retrieval augmented generation where it actually helped. Strong opinions on when to fine-tune versus prompt, backed by shipped systems.",
+    "Machine learning engineer at an early-stage product startup, 5 years experience. Built the candidate-job matching and ranking system end to end: embeddings, hybrid retrieval, vector index operations, evaluation metrics and recruiter feedback loops. Comfortable shipping a working version in a week and iterating."
+  ],
+  "anti": [
+    "Research scientist with publications in top conferences, eight years in academic labs and research-only roles, no production deployment experience.",
+    "Engineering leader who moved into architecture and management five years ago, sets technical direction and reviews designs but has not written production code recently.",
+    "Enthusiastic builder of LLM demos and tutorials using LangChain and the OpenAI API over the last year, with no machine learning production experience before that.",
+    "Computer vision specialist focused on image classification, object detection and GANs, with no exposure to NLP, search or information retrieval."
+  ]
+}
