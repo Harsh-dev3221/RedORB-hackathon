@@ -1,0 +1,25 @@
+[project]
+name = "verdict"
+version = "0.1.0"
+description = "VERDICT - Verified Evidence, Rubric-Driven Inference & Calibrated Triage. Candidate ranking for the Redrob challenge."
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "orjson>=3.9",
+    "fastembed>=0.4",
+    "tqdm>=4.66",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Only needed to regenerate the committed rubric artifact (offline phase).
+compile = ["google-genai>=1.0"]
+gpu = ["fastembed-gpu>=0.4"]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
