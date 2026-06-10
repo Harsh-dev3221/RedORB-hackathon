@@ -11,7 +11,7 @@ ART = ROOT / "artifacts"
 n_target, gz_target = [int(x) for x in (ROOT / "output" / "pretest_state.txt").read_text().split()]
 ids = (ART / "candidate_ids.txt").read_text(encoding="utf-8").splitlines()
 counts = np.load(ART / "sent_counts.npy")
-assert len(ids) == n_target + 1 and ids[-1] == "UPL_TEST001", "unexpected index state"
+assert len(ids) > n_target and all(i.startswith("UPL_") for i in ids[n_target:]), "unexpected index state"
 s_keep = int(counts[:n_target].sum())
 
 np.save(ART / "tmp.npy", np.load(ART / "evidence_vectors.npy")[:s_keep])
