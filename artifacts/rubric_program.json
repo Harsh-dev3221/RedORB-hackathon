@@ -142,7 +142,15 @@
     "title_hopper": {"factor": 0.60, "median_tenure_below_mo": 18, "min_jobs": 3, "explain": "JD explicit: title-chasers switching every ~1.5 years"},
     "manager_no_code": {"factor": 0.45, "director_factor": 0.25, "explain": "JD explicit: architecture/lead roles with no production code in 18 months - this role writes code"},
     "cv_speech_only": {"factor": 0.25, "explain": "JD explicit: CV/speech/robotics expertise without NLP/IR exposure"},
-    "framework_only_ai": {"factor": 0.35, "explain": "JD explicit: recent LangChain-only AI experience without pre-LLM ML production depth"}
+    "framework_only_ai": {"factor": 0.35, "explain": "JD explicit: recent LangChain-only AI experience without pre-LLM ML production depth"},
+    "evidence_floor": {
+      "tech_families": ["ml_engineer", "applied_scientist", "nlp_engineer", "search_engineer", "data_scientist", "data_engineer", "mlops_engineer", "backend", "fullstack", "swe", "devops"],
+      "ml_ir_families": ["ml_engineer", "applied_scientist", "nlp_engineer", "search_engineer", "data_scientist"],
+      "core_evidence_categories": ["nlp", "search", "ranking", "embeddings", "vector_db", "llm", "ml_core", "mlops"],
+      "non_tech_no_evidence": {"factor": 0.20, "explain": "no technical role anywhere in career AND zero corroborated ML/IR evidence - crisp-rule points alone cannot carry a non-technical profile"},
+      "adjacent_without_depth": {"factor": 0.40, "min_core_categories": 2, "min_fuzzy": 0.55, "explain": "adjacent-tech career (backend/data-eng/devops) without enough corroborated ML/IR depth or strong narrative predicate evidence"},
+      "no_core_evidence": {"factor": 0.55, "min_fuzzy": 0.35, "explain": "company/location/tenure fit not backed by ANY core ML/IR evidence - fit-shaped is not fit"}
+    }
   },
   "abm": {
     "families": ["ml_engineer", "applied_scientist", "nlp_engineer", "search_engineer", "data_scientist", "mlops_engineer"],

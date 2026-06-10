@@ -134,27 +134,32 @@ def judge(
         j *= dmp["framework_only_ai"]["factor"]
         dnotes.append("framework-level AI claims without corroborated ML/IR depth")
 
-    tech_fams = {
-        "ml_engineer", "applied_scientist", "nlp_engineer", "search_engineer",
-        "data_scientist", "data_engineer", "mlops_engineer", "backend", "fullstack",
-        "swe", "devops",
-    }
-    ml_ir_fams = {"ml_engineer", "applied_scientist", "nlp_engineer", "search_engineer", "data_scientist"}
+    # evidence-floor dampeners: crisp-rule points alone cannot carry a profile
+    # with no corroborated core evidence (all factors/thresholds live in the rubric)
+    ef = dmp["evidence_floor"]
+    tech_fams = set(ef["tech_families"])
+    ml_ir_fams = set(ef["ml_ir_families"])
     has_tech_role = rec.current_family in tech_fams or bool(set(rec.families) & tech_fams)
     has_ml_ir_role = rec.current_family in ml_ir_fams or bool(set(rec.families) & ml_ir_fams)
     fuzzy_strength = max(
         (scores.get(pid, 0.0) for pid in rubric["fuzzy_predicates"]),
         default=0.0,
     )
-    core_evidence = corro & (nlp_ir | {"ml_core", "mlops"})
+    core_evidence = corro & set(ef["core_evidence_categories"])
+    adj = ef["adjacent_without_depth"]
+    noev = ef["no_core_evidence"]
     if not has_tech_role and not core_evidence:
-        j *= 0.20
+        j *= ef["non_tech_no_evidence"]["factor"]
         dnotes.append("non-technical career with no corroborated ML/IR evidence")
-    elif not has_ml_ir_role and len(core_evidence) < 2 and fuzzy_strength < 0.55:
-        j *= 0.40
+    elif (
+        not has_ml_ir_role
+        and len(core_evidence) < adj["min_core_categories"]
+        and fuzzy_strength < adj["min_fuzzy"]
+    ):
+        j *= adj["factor"]
         dnotes.append("adjacent tech profile without enough corroborated ML/IR depth")
-    elif not core_evidence and fuzzy_strength < 0.35:
-        j *= 0.55
+    elif not core_evidence and fuzzy_strength < noev["min_fuzzy"]:
+        j *= noev["factor"]
         dnotes.append("product/company fit is not backed by core ML/IR evidence")
 
     return min(j, 1.0), scores, notes, dnotes

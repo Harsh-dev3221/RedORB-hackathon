@@ -25,3 +25,6 @@ output/
 .sixth/
 .cache/
 
+# Private prep material (not part of the submission repo)
+INTERVIEW_PREP.md
+
