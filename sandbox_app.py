@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import csv
 import io
-import json
 import math
 import re
 import sys
@@ -35,6 +34,7 @@ from verdict.reasoning import synthesize
 from verdict.recall import passes_gates
 
 MAX_SAMPLE = 100
+DISPLAY_TOP_N = 25
 TOKEN = re.compile(r"[a-z0-9+#\-]{2,}")
 STOP = frozenset(
     "the a an and or of to in for with on at by from as is are was were be been "
@@ -182,40 +182,47 @@ def rows_to_csv(rows: list[dict]) -> str:
 def main() -> None:
     st.set_page_config(page_title="VERDICT Redrob Sandbox", layout="wide")
     st.title("VERDICT Redrob Sandbox")
-    st.caption("Small-sample demo for <=100 candidates. Official full-pool submission uses rank.py.")
+    st.caption("Working small-sample ranker for <=100 candidates. Official full-pool submission uses rank.py.")
 
     rubric = load_rubric()
     uploaded = st.file_uploader("Upload candidates JSONL or JSON array", type=["jsonl", "json"])
-    use_sample = st.button("Load bundled top-100 sample", use_container_width=False)
 
-    candidates: list[dict] = []
+    source = "bundled top-100 sample"
     if uploaded is not None:
         try:
             candidates = _load_uploaded_candidates(uploaded.getvalue(), uploaded.name)
+            source = f"uploaded file: {uploaded.name}"
         except ValueError as exc:
             st.error(str(exc))
             return
-    elif use_sample:
+    else:
         candidates = _load_sample_candidates()
 
     if not candidates:
-        st.info("Upload a small candidate file or load the bundled sample.")
+        st.error("Bundled sample is missing. Upload a small candidate file to run the sandbox.")
         return
     if len(candidates) > MAX_SAMPLE:
         st.error(f"Sandbox limit is {MAX_SAMPLE} candidates; uploaded {len(candidates)}.")
         return
 
-    with st.spinner("Ranking sample..."):
+    st.info(f"Ranking source: {source}. Loaded {len(candidates)} candidates.")
+    with st.spinner("Running VERDICT ranking..."):
         rows = rank_sample(candidates, rubric)
     if not rows:
         st.warning("No uploaded candidates passed the hard gates.")
         return
 
-    st.metric("Candidates ranked", len(rows))
-    st.dataframe(rows, hide_index=True, use_container_width=True)
+    visible_rows = rows[:DISPLAY_TOP_N]
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Candidates loaded", len(candidates))
+    c2.metric("Candidates ranked", len(rows))
+    c3.metric("Showing", f"Top {len(visible_rows)}")
+
+    st.subheader(f"Top {len(visible_rows)} ranked candidates")
+    st.dataframe(visible_rows, hide_index=True, use_container_width=True)
     csv_text = rows_to_csv(rows)
     st.download_button(
-        "Download ranked CSV",
+        "Download full ranked CSV",
         data=csv_text,
         file_name="sandbox_ranked_candidates.csv",
         mime="text/csv",
