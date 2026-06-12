@@ -33,6 +33,40 @@ python validate_submission.py submission.csv
 
 Measured on a Ryzen 9 5900HX / 16 GB laptop: rank step **~12 s** end-to-end (budget: 300 s). The rank step loads no model and makes no network calls — it is pure numpy over precomputed vectors.
 
+## Sandbox / demo app
+
+The portal sandbox is a small-sample demo, not the full 100K Stage-3 reproduction.
+It accepts a JSONL or JSON array with up to 100 candidates and produces a ranked
+CSV using the same claim ledger, rubric rules, credibility, availability,
+fusion, and reasoning modules as the submission code.
+
+Run locally:
+
+```bash
+pip install -r requirements-sandbox.txt
+streamlit run sandbox_app.py
+```
+
+Docker alternative:
+
+```bash
+docker build -f Dockerfile.sandbox -t verdict-redrob-sandbox .
+docker run --rm -p 8501:8501 verdict-redrob-sandbox
+```
+
+Hosted options:
+
+- Streamlit Cloud: app file `sandbox_app.py`, requirements file `requirements-sandbox.txt`.
+- HuggingFace Spaces: create a Streamlit Space and use `sandbox_app.py` as the app entrypoint.
+
+Important: the sandbox intentionally avoids the full precomputed vector artifact
+so it stays lightweight for hosted demos. The official full-pool ranking command
+remains:
+
+```bash
+python rank.py --candidates ./candidates.jsonl --out submission.csv
+```
+
 ## Pipeline (two phases)
 
 ```
@@ -49,34 +83,31 @@ probe/predicate embeddings        evidence-grounded reasoning → CSV
 
 | Path | What it is |
 |---|---|
-| `rank.py` | The ranking step (Stage-3 reproduced command) |
-| `precompute.py` | Offline artifact builder (embeddings, ledger, probes) |
-| `search.py` | Recruiter-style multi-role search surface over the same artifacts |
-| `ingest.py` | **Incremental upload**: new candidates → embed only the delta → searchable in seconds, no rebuild (atomic in-place append; `--replace` upserts; `--format text` parses raw resumes via Gemini) |
-| `explain.py` | Per-candidate verdict breakdown: every rule × weight, fired evidence sentences, flags — the recruiter-trust surface |
-| `api.py` | REST surface (`/search`, `/ingest`, `/explain`, `/rank`, `/healthz`) — the hosted-sandbox demo app (`uvicorn api:app`) |
-| `scripts/build_probes.py` | **Rank a brand-new JD without re-embedding**: candidate vectors are JD-agnostic; only the ~50 probe vectors depend on the rubric (seconds to rebuild) |
-| `src/verdict/resume_parser.py` | Gemini raw-resume → candidate-schema JSON (ingest-time only, never rank-time) |
-| `rubric_diff.py` | Compare two rubric versions' top-N: who entered/dropped/moved and **which rule contribution explains each move** — the recruiter-feedback loop made auditable |
-| `dossier.py` | Shortlist export: top-N as a markdown pack with each candidate's full evidence breakdown — what a recruiter forwards to a hiring manager |
-| `drift_monitor.py` | `record`/`check` score-distribution snapshots over a deterministic 2% sample; PSI > 0.25 ⇒ "rebuild probes + recalibrate floors" alert |
-| `src/verdict/twins.py` | Upload-time near-duplicate detection (narrative cosine + behavioral-telemetry match), wired into `ingest.py` (`--dry-run` validates, `--strict` rejects) |
+| `rank.py` | The constrained full-pool ranking step |
+| `precompute.py` | Offline artifact builder for candidate evidence vectors, ledgers, and probes |
+| `sandbox_app.py` | Small-sample Streamlit demo for the portal sandbox requirement |
+| `scripts/build_probes.py` | Rebuild JD/probe embeddings without re-embedding candidate evidence |
+| `scripts/bench_cpu_embeddings.py` | CPU embedding benchmark harness |
+| `scripts/audit_quality_gates.py` | Submission-level quality gate for keyword stuffing, honeypots, availability, and hidden gems |
+| `scripts/audit_honeypots.py` | Full-pool trap inventory plus top-100 leakage audit |
+| `src/verdict/data.py` | Candidate JSON/JSONL/GZIP streaming loader |
 | `src/verdict/normalizer.py` | Entity standardization: titles, skills ontology, companies, locations |
-| `src/verdict/evidence.py` | L1 claim ledger: timelines, corroboration, evidence sentences |
-| `src/verdict/credibility.py` | L2: contradiction detection, stuffing signature → C |
+| `src/verdict/evidence.py` | Claim ledger: timelines, corroboration, evidence sentences |
+| `src/verdict/embedder.py` | Offline FastEmbed wrapper used by `precompute.py` |
 | `src/verdict/recall.py` | Gates + ABM + BM25 + dense recall + RRF fusion |
-| `src/verdict/judgment.py` | L3: rubric execution, fuzzy predicates → J |
-| `src/verdict/availability.py` | L4: 23 behavioral signals → A |
-| `src/verdict/fusion.py` | L5: J×C×A fusion + finalist tournament |
-| `src/verdict/reasoning.py` | L6: hallucination-proof reasoning assembly |
-| `src/verdict/feel_compiler.py` | L0: Gemini-powered JD→rubric draft compiler (offline only) |
-| `artifacts/rubric_program.json` | The compiled, human-reviewed rubric (the auditable core) |
-| `scripts/` | Calibration + audit tooling (predicate calibration, top-100 honeypot audit, evidence-cap audit) |
+| `src/verdict/judgment.py` | Rubric execution and fuzzy predicates |
+| `src/verdict/credibility.py` | Contradiction detection and stuffing penalties |
+| `src/verdict/availability.py` | Behavioral/logistics availability scoring |
+| `src/verdict/fusion.py` | J x C x A fusion and finalist tournament |
+| `src/verdict/reasoning.py` | Evidence-grounded reasoning assembly |
+| `artifacts/rubric_program.json` | Compiled, reviewed rubric |
+| `requirements-sandbox.txt` | Dependencies for the sandbox app |
+| `Dockerfile.sandbox` | Optional Docker wrapper for the sandbox app |
 
 ## Key design facts (for review)
 
 - **Embeddings are evidence detectors, not scores.** Career narratives are embedded sentence-level; the skills list is *never* embedded — self-declared skills enter only as low-trust claims needing corroboration.
-- **Predicate scoring is contrastive.** BGE cosines have a ~0.6 floor between any two texts; predicates score `max(cos_pos − cos_nearest_negative)`, calibrated on observed distributions (`scripts/calibrate_predicates.py`).
-- **Top-100 honeypot audit: 0 leaked** (480 internally-contradictory profiles detected pool-wide, all excluded) — `scripts/audit_top100.py`.
+- **Predicate scoring is contrastive.** BGE cosines have a ~0.6 floor between any two texts; predicates score `max(cos_pos - cos_nearest_negative)`.
+- **Top-100 honeypot audit: 0 leaked** under the current observable-trap audit - `scripts/audit_honeypots.py`.
 - **Reasoning cannot hallucinate**: it is assembled from ledger fields and fired-rule evidence pointers only, tone tied to rank band, concerns always voiced.
 - AI usage declaration: LLMs (Claude, Codex, Gemini) used for architecture research, code drafting, and offline rubric compilation. All ranking logic is deterministic local code; no LLM runs at rank time.

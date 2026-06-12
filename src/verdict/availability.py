@@ -94,4 +94,21 @@ def score_availability(rec: LedgerRecord, rubric: dict) -> tuple[float, list[str
         * max(logistics, 1e-4) ** w["logistics"]
         * max(min(corro, 1.0), 1e-4) ** w["corroboration"]
     )
+    # Challenge trap: a perfect-on-paper profile that is both stale and
+    # non-responsive is not practically hireable. Keep this as a cap rather
+    # than another multiplicative term so the failure mode is auditable.
+    if days_idle >= 180 and rr <= 0.10:
+        flags.append(f"UNREACHABLE: last active {days_idle:.0f} days ago with {rr:.0%} response rate")
+        a = min(a, 0.12)
+    elif days_idle >= 240:
+        flags.append(f"STALE_PROFILE: last active {days_idle:.0f} days ago")
+        a = min(a, 0.18)
+    elif rr <= 0.05 and not sig.get("open_to_work_flag"):
+        flags.append(f"PASSIVE_LOW_RESPONSE: not open to work and {rr:.0%} response rate")
+        a = min(a, 0.20)
+    if rec.notice_days > 120:
+        flags.append(f"EXTREME_NOTICE: {rec.notice_days}-day notice period")
+        a = min(a, 0.45)
+    elif rec.notice_days > 90:
+        a = min(a, 0.60)
     return min(a, 1.0), flags

@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements-sandbox.txt .
+RUN pip install --no-cache-dir -r requirements-sandbox.txt
+
+COPY artifacts/rubric_program.json artifacts/rubric_program.json
+COPY src src
+COPY sandbox_app.py sandbox_app.py
+
+EXPOSE 8501
+
+CMD ["streamlit", "run", "sandbox_app.py", "--server.address=0.0.0.0", "--server.port=8501"]

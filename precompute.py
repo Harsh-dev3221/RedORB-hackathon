@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import hashlib
 import sys
 import time
 from pathlib import Path
@@ -39,24 +40,50 @@ from verdict.recall import abm_score, bm25_rank, passes_gates
 ART = Path(__file__).parent / "artifacts"
 
 _worker_model = None
+_worker_batch_size = 8
 
 
-def _init_worker():
+def _init_worker(threads: int, batch_size: int):
     global _worker_model
-    _worker_model = get_model(threads=2)
+    global _worker_batch_size
+    _worker_model = get_model(threads=threads)
+    _worker_batch_size = batch_size
 
 
 def _embed_chunk(chunk: list[str]) -> bytes:
     # fp16 bytes keep IPC payloads small
-    return embed_passages(_worker_model, chunk, batch_size=32).astype(np.float16).tobytes()
+    return embed_passages(_worker_model, chunk, batch_size=_worker_batch_size).astype(np.float16).tobytes()
+
+
+def _sentence_hash(text: str) -> bytes:
+    normalized = " ".join(text.split()).encode("utf-8")
+    return hashlib.blake2b(normalized, digest_size=16).digest()
+
+
+def _dedupe_sentences(sentences: list[str]) -> tuple[list[str], np.ndarray]:
+    """Return unique first-seen sentences and inverse indices into that list."""
+    seen: dict[bytes, int] = {}
+    unique: list[str] = []
+    inverse = np.empty(len(sentences), dtype=np.int64)
+    for i, sent in enumerate(sentences):
+        key = _sentence_hash(sent)
+        idx = seen.get(key)
+        if idx is None:
+            idx = len(unique)
+            seen[key] = idx
+            unique.append(sent)
+        inverse[i] = idx
+    return unique, inverse
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--candidates", required=True)
     ap.add_argument("--threads", type=int, default=8)
-    ap.add_argument("--batch-size", type=int, default=32)
+    ap.add_argument("--batch-size", type=int, default=8)
     ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument("--worker-threads", type=int, default=2)
+    ap.add_argument("--no-dedupe", action="store_true", help="disable sentence hash dedupe before embedding")
     ap.add_argument("--cuda", action="store_true", help="use fastembed-gpu CUDA path for offline embedding")
     ap.add_argument(
         "--all-candidates",
@@ -113,28 +140,45 @@ def main() -> None:
 
     # ---- embed (token-bound on CPU -> shard across worker processes) ----
     t0 = time.time()
-    vecs = np.empty((len(sentences), DIM), dtype=np.float16)
+    if args.no_dedupe:
+        embed_sentences = sentences
+        inverse = None
+    else:
+        embed_sentences, inverse = _dedupe_sentences(sentences)
+        saved = len(sentences) - len(embed_sentences)
+        pct = (100.0 * saved / len(sentences)) if sentences else 0.0
+        print(f"sentence hash dedupe: {len(embed_sentences)} unique, saved {saved} embeds ({pct:.1f}%)")
+
+    unique_vecs = np.empty((len(embed_sentences), DIM), dtype=np.float16)
     cs = 1024
-    chunks = [sentences[i : i + cs] for i in range(0, len(sentences), cs)]
-    if args.workers <= 1 or len(sentences) < 4096:
+    chunks = [embed_sentences[i : i + cs] for i in range(0, len(embed_sentences), cs)]
+    if args.workers <= 1 or len(embed_sentences) < 4096:
         model = get_model(threads=args.threads, cuda=args.cuda)
         off = 0
         for ch in tqdm(chunks, desc="embedding"):
             out = embed_passages(model, ch, batch_size=args.batch_size).astype(np.float16)
-            vecs[off : off + len(out)] = out
+            unique_vecs[off : off + len(out)] = out
             off += len(out)
     else:
         import multiprocessing as mp
 
-        with mp.Pool(processes=args.workers, initializer=_init_worker) as pool:
+        with mp.Pool(
+            processes=args.workers,
+            initializer=_init_worker,
+            initargs=(args.worker_threads, args.batch_size),
+        ) as pool:
             off = 0
             for raw in tqdm(
                 pool.imap(_embed_chunk, chunks), total=len(chunks), desc="embedding"
             ):
                 out = np.frombuffer(raw, dtype=np.float16).reshape(-1, DIM)
-                vecs[off : off + len(out)] = out
+                unique_vecs[off : off + len(out)] = out
                 off += len(out)
-    print(f"embedded {len(sentences)} sentences in {time.time()-t0:.0f}s")
+    if inverse is None:
+        vecs = unique_vecs
+    else:
+        vecs = unique_vecs[inverse]
+    print(f"embedded {len(embed_sentences)} unique / {len(sentences)} total sentences in {time.time()-t0:.0f}s")
 
     model = get_model(threads=args.threads, cuda=args.cuda)  # for probe/query embedding below
 

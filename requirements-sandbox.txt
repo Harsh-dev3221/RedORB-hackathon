@@ -1,0 +1,4 @@
+numpy>=1.26
+orjson>=3.9
+pyyaml>=6.0
+streamlit>=1.36

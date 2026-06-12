@@ -56,9 +56,9 @@ def main() -> None:
     t_start = time.time()
 
     rubric = orjson.loads((ART / "rubric_program.json").read_bytes())
-    sent_vecs = np.load(ART / "evidence_vectors.npy")           # fp16 [S, 384]
-    counts = np.load(ART / "sent_counts.npy")                   # [N]
-    mean_vecs_all = np.load(ART / "mean_vecs.npy")              # fp16 [N, 384]
+    sent_vecs = np.load(ART / "evidence_vectors.npy", mmap_mode="r")  # fp16 [S, 384]
+    counts = np.load(ART / "sent_counts.npy", mmap_mode="r")          # [N]
+    mean_vecs_all = np.load(ART / "mean_vecs.npy", mmap_mode="r")     # fp16 [N, 384]
     pre_ids = (ART / "candidate_ids.txt").read_text(encoding="utf-8").splitlines()
     probes = np.load(ART / "probes.npz")
     offsets = np.zeros(len(counts) + 1, dtype=np.int64)

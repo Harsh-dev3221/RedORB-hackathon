@@ -457,19 +457,20 @@ def _temporal_checks(c: dict, rec: LedgerRecord, ref_year: int) -> None:
                 f"career start {first_start} predates graduation {rec.edu_end_year} by {rec.edu_end_year - first_start} yrs"
             )
 
-    # skill duration vs total career length
+    # skill duration vs total career length. Scan ALL skills before deciding:
+    # an early mild violation must never shadow a later hard impossibility
+    # (skill order in the profile is arbitrary). Still one message; don't spam.
     total_mo = rec.yoe_timeline * 12
-    for s in rec.skills:
-        if total_mo > 0 and s["months"] > total_mo + 36 and s["months"] > total_mo * 1.5:
+    if total_mo > 0 and rec.skills:
+        worst = max(rec.skills, key=lambda s: s["months"])
+        if worst["months"] > total_mo + 36 and worst["months"] > total_mo * 1.5:
             rec.impossibilities.append(
-                f"skill '{s['canon']}' claims {s['months']} mo of use vs {total_mo:.0f} mo total career"
+                f"skill '{worst['canon']}' claims {worst['months']} mo of use vs {total_mo:.0f} mo total career"
             )
-            break  # one is enough; don't spam
-        if total_mo > 0 and s["months"] > total_mo + 12:
+        elif worst["months"] > total_mo + 12:
             rec.suspicions.append(
-                f"skill '{s['canon']}' claims {s['months']} mo of use vs {total_mo:.0f} mo total career"
+                f"skill '{worst['canon']}' claims {worst['months']} mo of use vs {total_mo:.0f} mo total career"
             )
-            break
     # expert/advanced with ~zero usage
     zero_expert = [
         s["canon"] for s in rec.skills

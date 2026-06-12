@@ -1,8 +1,8 @@
 """Rebuild ONLY the probe vectors (ideal personas + predicate/negative queries).
 
 This is what makes the index JD-agnostic: candidate embeddings never depend on
-the rubric, so ranking a brand-new JD = compile rubric (feel_compiler) -> run
-this (~seconds) -> rank.py / search.py. No re-embedding of 100K candidates.
+the rubric, so ranking a brand-new JD = compile/review rubric -> run this
+(~seconds) -> rank.py. No re-embedding of 100K candidates.
 
   python scripts/build_probes.py                              # default rubric
   python scripts/build_probes.py --rubric artifacts/generated/rubric_new_role.json \
