@@ -1,0 +1,58 @@
+# Redrob Hackathon - Submission Metadata
+# Fill TODO fields before portal upload. Keep values aligned with the portal form.
+
+team_name: "TODO_TEAM_NAME"
+
+primary_contact:
+  name: "TODO_FULL_NAME"
+  email: "TODO_EMAIL"
+  phone: "TODO_PHONE"
+
+team_members:
+  - name: "TODO_FULL_NAME"
+    email: "TODO_EMAIL"
+    role: "Team Lead / Engineer"
+
+github_repo: "https://github.com/Harsh-dev3221/RedORB-hackathon"
+
+sandbox_link: "https://redorb-hackathon-easy.streamlit.app"
+
+reproduce_command: "python rank.py --candidates ./candidates.jsonl --out ./submission.csv"
+
+compute:
+  platform: "ASUS TUF Gaming A15 FA506QM_FA506QM"
+  cpu_cores: 16
+  ram_gb: 16
+  python_version: "3.11.15"
+  os: "Microsoft Windows 11 Home Single Language 10.0.26200"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: true
+  pre_computation_time_minutes: null
+
+ai_tools_used:
+  - "ChatGPT / Codex"
+  - "Claude"
+  - "Gemini"
+
+ai_usage_summary: |
+  AI tools were used for architecture discussion, code review, debugging,
+  documentation, and offline rubric-development assistance. The final ranking
+  step is deterministic local Python/NumPy code over precomputed artifacts.
+  No hosted LLM, external API, GPU, or network call is used during ranking.
+
+methodology_summary: |
+  VERDICT ranks candidates with a deterministic J x C x A pipeline. J executes
+  a compiled JD rubric over evidence sentences and structured career signals;
+  C penalizes contradictions, impossible timelines, unsupported expert claims,
+  and keyword-stuffing patterns; A uses Redrob behavioral/logistics signals
+  such as response rate, recency, open-to-work, notice period, location, and
+  verification. Candidate embeddings are precomputed offline, while the
+  constrained rank step runs CPU-only in about 14 seconds on the 100K pool.
+
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true
+  reproduction_tested: true

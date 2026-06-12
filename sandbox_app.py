@@ -45,7 +45,20 @@ def load_rubric() -> dict:
 
 @st.cache_resource(show_spinner=False)
 def load_embedding_model():
-    return get_model(threads=EMBED_THREADS, cuda=False)
+    try:
+        return get_model(threads=EMBED_THREADS, cuda=False)
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "FastEmbed is not installed in this Streamlit environment. "
+            "Redeploy with Python 3.11 selected in Streamlit Advanced settings "
+            "and requirements.txt installed."
+        ) from exc
+    except Exception as exc:
+        raise RuntimeError(
+            "Embedding model failed to load. This sandbox requires Python 3.11 "
+            "because FastEmbed/ONNX Runtime is not reliable on Streamlit's "
+            "default Python 3.14 runtime."
+        ) from exc
 
 
 @st.cache_data(show_spinner=False)
@@ -194,8 +207,12 @@ def main() -> None:
 
     st.info(f"Ranking source: {source}. Loaded {len(candidates)} candidates.")
     with st.spinner("Loading CPU embedding model and running VERDICT ranking..."):
-        model = load_embedding_model()
-        rows = rank_sample(candidates, rubric, model)
+        try:
+            model = load_embedding_model()
+            rows = rank_sample(candidates, rubric, model)
+        except RuntimeError as exc:
+            st.error(str(exc))
+            st.stop()
     if not rows:
         st.warning("No uploaded candidates passed the hard gates.")
         return
