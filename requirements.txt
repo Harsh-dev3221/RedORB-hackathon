@@ -1,5 +1,4 @@
-numpy==1.26.4
-orjson==3.11.5
-pyyaml==6.0.3
-streamlit==1.50.0
-fastembed==0.7.3
+streamlit>=1.58.0
+fastembed==0.8.0
+orjson>=3.11.9
+pyyaml>=6.0.3

@@ -224,7 +224,7 @@ def main() -> None:
     c3.metric("Showing", f"Top {len(visible_rows)}")
 
     st.subheader(f"Top {len(visible_rows)} ranked candidates")
-    st.dataframe(visible_rows, hide_index=True, use_container_width=True)
+    st.dataframe(visible_rows, hide_index=True, width="stretch")
     csv_text = rows_to_csv(rows)
     st.download_button(
         "Download full ranked CSV",
