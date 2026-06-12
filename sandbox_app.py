@@ -10,6 +10,7 @@ fusion, and reasoning code used by the local pipeline.
 from __future__ import annotations
 
 import csv
+import html
 import io
 import sys
 from pathlib import Path
@@ -191,6 +192,35 @@ def rows_to_csv(rows: list[dict]) -> str:
     return out.getvalue()
 
 
+def render_ranked_results(rows: list[dict]) -> None:
+    for row in rows:
+        rank = html.escape(str(row["rank"]))
+        title = html.escape(str(row["title"]))
+        candidate_id = html.escape(str(row["candidate_id"]))
+        reasoning = html.escape(str(row["reasoning"]))
+        score = html.escape(str(row["score"]))
+        credibility = html.escape(str(row["credibility"]))
+        availability = html.escape(str(row["availability"]))
+        st.markdown(
+            f"""
+<div class="candidate-row">
+  <div class="candidate-rank">#{rank}</div>
+  <div class="candidate-main">
+    <div class="candidate-title">{title}</div>
+    <div class="candidate-id">{candidate_id}</div>
+    <div class="candidate-reason">{reasoning}</div>
+  </div>
+  <div class="candidate-scores">
+    <div><span>Score</span><strong>{score}</strong></div>
+    <div><span>Credibility</span><strong>{credibility}</strong></div>
+    <div><span>Availability</span><strong>{availability}</strong></div>
+  </div>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
+
 def main() -> None:
     st.set_page_config(page_title="VERDICT Redrob Sandbox", layout="wide")
     rubric = load_rubric()
@@ -198,6 +228,78 @@ def main() -> None:
 
     st.title("VERDICT Redrob Candidate Ranking Sandbox")
     st.caption("Hosted small-sample demo. The full 100K submission is reproduced with rank.py.")
+    st.markdown(
+        """
+<style>
+.candidate-row {
+  display: grid;
+  grid-template-columns: 72px minmax(360px, 1fr) 280px;
+  gap: 18px;
+  align-items: start;
+  padding: 16px 18px;
+  margin: 10px 0;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.28);
+}
+.candidate-rank {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: #e5e7eb;
+}
+.candidate-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+.candidate-id {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.candidate-reason {
+  margin-top: 10px;
+  color: #e2e8f0;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.candidate-scores {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.candidate-scores div {
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 6px;
+  background: rgba(2, 6, 23, 0.32);
+}
+.candidate-scores span {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.candidate-scores strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  color: #f8fafc;
+}
+@media (max-width: 900px) {
+  .candidate-row {
+    grid-template-columns: 52px 1fr;
+  }
+  .candidate-scores {
+    grid-column: 2;
+  }
+}
+</style>
+""",
+        unsafe_allow_html=True,
+    )
 
     st.subheader("Job Description Target")
     jd_cols = st.columns([1.4, 1, 1])
@@ -267,19 +369,7 @@ def main() -> None:
     c3.metric("Showing", f"Top {len(visible_rows)}")
 
     st.subheader(f"Top {len(visible_rows)} ranked candidates")
-    display_rows = [
-        {
-            "rank": row["rank"],
-            "candidate_id": row["candidate_id"],
-            "title": row["title"],
-            "score": row["score"],
-            "credibility": row["credibility"],
-            "availability": row["availability"],
-            "reasoning": row["reasoning"],
-        }
-        for row in visible_rows
-    ]
-    st.dataframe(display_rows, hide_index=True, width="stretch")
+    render_ranked_results(visible_rows)
     csv_text = rows_to_csv(rows)
     st.download_button(
         "Download full ranked CSV",
