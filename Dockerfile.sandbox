@@ -6,6 +6,7 @@ COPY requirements-sandbox.txt .
 RUN pip install --no-cache-dir -r requirements-sandbox.txt
 
 COPY artifacts/rubric_program.json artifacts/rubric_program.json
+COPY samples samples
 COPY src src
 COPY sandbox_app.py sandbox_app.py
 

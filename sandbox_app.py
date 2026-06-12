@@ -75,13 +75,15 @@ def _load_uploaded_candidates(raw: bytes, name: str) -> list[dict]:
 
 @st.cache_data(show_spinner=False)
 def _load_sample_candidates() -> list[dict]:
-    sample = ROOT / "[PUB] India_runs_data_and_ai_challenge" / "India_runs_data_and_ai_challenge" / "sample_candidates.json"
+    sample = ROOT / "samples" / "top100_candidates.json"
+    if not sample.exists():
+        sample = ROOT / "[PUB] India_runs_data_and_ai_challenge" / "India_runs_data_and_ai_challenge" / "sample_candidates.json"
     if sample.exists():
         with NamedTemporaryFile("wb", suffix=".json", delete=False) as tmp:
             tmp.write(sample.read_bytes())
             tmp_path = tmp.name
         try:
-            return list(iter_candidates(tmp_path))[:50]
+            return list(iter_candidates(tmp_path))[:MAX_SAMPLE]
         finally:
             Path(tmp_path).unlink(missing_ok=True)
     return []
@@ -184,7 +186,7 @@ def main() -> None:
 
     rubric = load_rubric()
     uploaded = st.file_uploader("Upload candidates JSONL or JSON array", type=["jsonl", "json"])
-    use_sample = st.button("Load bundled sample candidates", use_container_width=False)
+    use_sample = st.button("Load bundled top-100 sample", use_container_width=False)
 
     candidates: list[dict] = []
     if uploaded is not None:
