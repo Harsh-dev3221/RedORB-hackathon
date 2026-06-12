@@ -47,6 +47,24 @@ def _load_precomputed_records(pre_ids: list[str]) -> list | None:
     return records
 
 
+def _small_input_ids(path: str, max_bytes: int = 20 * 1024 * 1024) -> set[str] | None:
+    """Return candidate IDs for small/sample inputs.
+
+    Full-pool ranking should not spend time re-reading candidates.jsonl just to
+    confirm IDs. Small sandbox/sample files need the opposite behavior: when
+    artifacts contain the full 100K pool, the ranker must still restrict itself
+    to the uploaded/sample candidates.
+    """
+    p = Path(path)
+    try:
+        if p.stat().st_size > max_bytes:
+            return None
+    except OSError:
+        return None
+    ids = {str(c.get("candidate_id")) for c in iter_candidates(path) if c.get("candidate_id")}
+    return ids or None
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--candidates", required=True)
@@ -69,10 +87,13 @@ def main() -> None:
     t0 = time.time()
     precomputed = _load_precomputed_records(pre_ids)
     if precomputed is not None:
+        requested_ids = _small_input_ids(args.candidates)
         # records.jsonl.gz may contain the full pool (--all-candidates builds);
         # hard gates must still apply on the rank path.
         survivors, surv_pool_idx = [], []
         for i, rec in enumerate(precomputed):
+            if requested_ids is not None and rec.candidate_id not in requested_ids:
+                continue
             if passes_gates(rec, rubric["gates"]):
                 survivors.append(rec)
                 surv_pool_idx.append(i)
