@@ -1,17 +1,17 @@
 # Redrob Hackathon - Submission Metadata
 # Fill TODO fields before portal upload. Keep values aligned with the portal form.
 
-team_name: "TODO_TEAM_NAME"
+team_name: "verdict"
 
 primary_contact:
-  name: "TODO_FULL_NAME"
-  email: "TODO_EMAIL"
-  phone: "TODO_PHONE"
+  name: "Harsh Patel"
+  email: "harshpatel25800.dev@gmail.com"
+  phone: "+91 7016972609"
 
 team_members:
-  - name: "TODO_FULL_NAME"
-    email: "TODO_EMAIL"
-    role: "Team Lead / Engineer"
+  - name: "Harsh Patel"
+    email: "harshpatel25800.dev@gmail.com"
+    role: "Solo participant / Engineer"
 
 github_repo: "https://github.com/Harsh-dev3221/RedORB-hackathon"
 
