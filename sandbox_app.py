@@ -38,6 +38,18 @@ EMBED_BATCH_SIZE = 8
 EMBED_THREADS = 4
 
 
+def _jd_summary(rubric: dict) -> dict[str, str]:
+    meta = rubric.get("meta", {})
+    role = meta.get("role", "Senior AI Engineer - Founding Team, Redrob AI")
+    core = rubric.get("crisp_rules", {}).get("core_skill_coverage", {})
+    core_skills = ", ".join(core.get("core_categories", []))
+    return {
+        "role": role,
+        "core_skills": core_skills,
+        "mode": "CPU-only sample ranking with runtime embeddings",
+    }
+
+
 @st.cache_data(show_spinner=False)
 def load_rubric() -> dict:
     return orjson.loads((ROOT / "artifacts" / "rubric_program.json").read_bytes())
@@ -181,11 +193,42 @@ def rows_to_csv(rows: list[dict]) -> str:
 
 def main() -> None:
     st.set_page_config(page_title="VERDICT Redrob Sandbox", layout="wide")
-    st.title("VERDICT Redrob Sandbox")
-    st.caption("Working small-sample ranker for <=100 candidates. Official full-pool submission uses rank.py.")
-
     rubric = load_rubric()
-    uploaded = st.file_uploader("Upload candidates JSONL or JSON array", type=["jsonl", "json"])
+    jd = _jd_summary(rubric)
+
+    st.title("VERDICT Redrob Candidate Ranking Sandbox")
+    st.caption("Hosted small-sample demo. The full 100K submission is reproduced with rank.py.")
+
+    st.subheader("Job Description Target")
+    jd_cols = st.columns([1.4, 1, 1])
+    jd_cols[0].metric("Hiring role", jd["role"])
+    jd_cols[1].metric("Sample limit", f"{MAX_SAMPLE} candidates")
+    jd_cols[2].metric("Visible output", f"Top {DISPLAY_TOP_N}")
+    st.markdown(
+        "This sandbox ranks candidates for the released Redrob JD: a hands-on "
+        "founding-team Senior AI Engineer focused on production search, ranking, "
+        "recommendation, retrieval, embeddings, NLP/IR, and real user impact."
+    )
+    st.caption(f"Core rubric categories: {jd['core_skills']}")
+
+    with st.expander("What runs in this sandbox", expanded=False):
+        st.write(
+            "For the bundled or uploaded sample, the app builds the candidate claim ledger, "
+            "embeds evidence sentences on CPU, scores rubric predicates, applies credibility "
+            "and behavioral availability signals, then fuses the ranking and writes grounded reasoning."
+        )
+        st.write(
+            "The production submission uses precomputed vectors for the full 100K pool so the "
+            "official rank step remains under the five-minute CPU-only budget."
+        )
+
+    st.divider()
+    st.subheader("Candidate Sample")
+    uploaded = st.file_uploader(
+        "Upload candidates JSONL or JSON array",
+        type=["jsonl", "json"],
+        help="Upload up to 100 candidate records. If nothing is uploaded, the bundled top-100 sample is ranked automatically.",
+    )
 
     source = "bundled top-100 sample"
     if uploaded is not None:
@@ -224,7 +267,19 @@ def main() -> None:
     c3.metric("Showing", f"Top {len(visible_rows)}")
 
     st.subheader(f"Top {len(visible_rows)} ranked candidates")
-    st.dataframe(visible_rows, hide_index=True, width="stretch")
+    display_rows = [
+        {
+            "rank": row["rank"],
+            "candidate_id": row["candidate_id"],
+            "title": row["title"],
+            "score": row["score"],
+            "credibility": row["credibility"],
+            "availability": row["availability"],
+            "reasoning": row["reasoning"],
+        }
+        for row in visible_rows
+    ]
+    st.dataframe(display_rows, hide_index=True, width="stretch")
     csv_text = rows_to_csv(rows)
     st.download_button(
         "Download full ranked CSV",
