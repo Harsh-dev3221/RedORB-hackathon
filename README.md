@@ -36,9 +36,10 @@ Measured on a Ryzen 9 5900HX / 16 GB laptop: rank step **~12 s** end-to-end (bud
 ## Sandbox / demo app
 
 The portal sandbox is a small-sample demo, not the full 100K Stage-3 reproduction.
-It accepts a JSONL or JSON array with up to 100 candidates and produces a ranked
-CSV using the same claim ledger, rubric rules, credibility, availability,
-fusion, and reasoning modules as the submission code.
+It accepts a JSONL or JSON array with up to 100 candidates, embeds the sample
+on CPU at runtime, and produces a ranked CSV using the same claim ledger,
+rubric predicates, credibility, availability, fusion, and reasoning modules as
+the submission code.
 
 Run locally:
 
@@ -59,9 +60,8 @@ Hosted options:
 - Streamlit Cloud: app file `sandbox_app.py`, requirements file `requirements-sandbox.txt`.
 - HuggingFace Spaces: create a Streamlit Space and use `sandbox_app.py` as the app entrypoint.
 
-Important: the sandbox intentionally avoids the full precomputed vector artifact
-so it stays lightweight for hosted demos. The official full-pool ranking command
-remains:
+Important: the sandbox embeds only the small uploaded/bundled sample. The
+official full-pool ranking command remains:
 
 ```bash
 python rank.py --candidates ./candidates.jsonl --out submission.csv

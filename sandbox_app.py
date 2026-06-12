@@ -1,23 +1,21 @@
 """Small-sample Redrob sandbox for Streamlit/HuggingFace Spaces.
 
-The official Stage-3 command is still `rank.py`; this app is a lightweight
-demo surface for the submission portal's sandbox requirement. It accepts <=100
-candidates and ranks them with the same claim ledger, rubric rules,
-credibility, availability, fusion, and reasoning code. Fuzzy evidence predicates
-use a deterministic lexical approximation so the sandbox does not need the full
-~1GB precomputed vector artifact.
+The official Stage-3 command is still `rank.py`; this app is the hosted
+small-sample demo for the submission portal's sandbox requirement. It accepts
+<=100 candidates, embeds their evidence sentences on CPU at runtime, and ranks
+them with the same claim ledger, rubric predicates, credibility, availability,
+fusion, and reasoning code used by the local pipeline.
 """
 
 from __future__ import annotations
 
 import csv
 import io
-import math
-import re
 import sys
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import numpy as np
 import orjson
 import streamlit as st
 
@@ -27,28 +25,47 @@ sys.path.insert(0, str(ROOT / "src"))
 from verdict.availability import score_availability
 from verdict.credibility import score_credibility
 from verdict.data import iter_candidates
+from verdict.embedder import embed_passages, embed_queries, get_model
 from verdict.evidence import build_record
 from verdict.fusion import Scored, finalize
-from verdict.judgment import judge
+from verdict.judgment import judge, predicate_scores
 from verdict.reasoning import synthesize
 from verdict.recall import passes_gates
 
 MAX_SAMPLE = 100
 DISPLAY_TOP_N = 25
-TOKEN = re.compile(r"[a-z0-9+#\-]{2,}")
-STOP = frozenset(
-    "the a an and or of to in for with on at by from as is are was were be been "
-    "this that it its we our i my you your they their he she his her them us".split()
-)
-
-
-def _tokens(text: str) -> set[str]:
-    return {t for t in TOKEN.findall(text.lower()) if t not in STOP}
+EMBED_BATCH_SIZE = 8
+EMBED_THREADS = 4
 
 
 @st.cache_data(show_spinner=False)
 def load_rubric() -> dict:
     return orjson.loads((ROOT / "artifacts" / "rubric_program.json").read_bytes())
+
+
+@st.cache_resource(show_spinner=False)
+def load_embedding_model():
+    return get_model(threads=EMBED_THREADS, cuda=False)
+
+
+@st.cache_data(show_spinner=False)
+def _probe_texts(rubric: dict) -> tuple[list[str], dict[str, tuple[int, int]], list[str]]:
+    positives: list[str] = []
+    slices: dict[str, tuple[int, int]] = {}
+    for pid, cfg in rubric["fuzzy_predicates"].items():
+        start = len(positives)
+        positives.extend(cfg.get("positives", []))
+        slices[pid] = (start, len(positives))
+    negatives = list(rubric.get("predicate_negatives", []))
+    return positives, slices, negatives
+
+
+def build_probe_vectors(model, rubric: dict) -> tuple[dict[str, np.ndarray], np.ndarray]:
+    positives, slices, negatives = _probe_texts(rubric)
+    pos_vecs = embed_queries(model, positives) if positives else np.zeros((0, 384), dtype=np.float32)
+    neg_vecs = embed_queries(model, negatives) if negatives else np.zeros((0, 384), dtype=np.float32)
+    pred_vecs = {pid: pos_vecs[start:end] for pid, (start, end) in slices.items()}
+    return pred_vecs, neg_vecs
 
 
 def _load_uploaded_candidates(raw: bytes, name: str) -> list[dict]:
@@ -89,45 +106,15 @@ def _load_sample_candidates() -> list[dict]:
     return []
 
 
-def _lexical_predicates(rec, rubric: dict) -> dict[str, tuple[float, int]]:
-    """Approximate fuzzy predicates without embeddings for small sandbox runs."""
-    out: dict[str, tuple[float, int]] = {}
-    sent_tokens = [_tokens(s) for s in rec.sentences]
-    neg_tokens = set()
-    for neg in rubric.get("predicate_negatives", []):
-        neg_tokens |= _tokens(neg)
-
-    for pid, cfg in rubric["fuzzy_predicates"].items():
-        phrase_sets = [_tokens(p) for p in cfg.get("positives", [])]
-        best_score = 0.0
-        best_idx = -1
-        for i, toks in enumerate(sent_tokens):
-            if not toks:
-                continue
-            score = 0.0
-            for pset in phrase_sets:
-                if not pset:
-                    continue
-                overlap = len(toks & pset) / math.sqrt(len(toks) * len(pset))
-                score = max(score, overlap)
-            neg_overlap = len(toks & neg_tokens) / max(len(toks), 1)
-            adjusted = max(score - 0.35 * neg_overlap, 0.0)
-            if adjusted > best_score:
-                best_score = adjusted
-                best_idx = i
-        # Calibrated only for the sandbox: exact phrase/category evidence tends
-        # to land above 0.55, weak lexical contact below 0.3.
-        out[pid] = (min(best_score * 1.8, 1.0), best_idx if best_score >= 0.30 else -1)
-    return out
-
-
-def rank_sample(candidates: list[dict], rubric: dict) -> list[dict]:
+def rank_sample(candidates: list[dict], rubric: dict, model) -> list[dict]:
     records = [build_record(c) for c in candidates]
+    pred_vecs, neg_vecs = build_probe_vectors(model, rubric)
     scored: list[Scored] = []
     for idx, rec in enumerate(records):
         if not passes_gates(rec, rubric["gates"]):
             continue
-        preds = _lexical_predicates(rec, rubric)
+        sent_vecs = embed_passages(model, rec.sentences, batch_size=EMBED_BATCH_SIZE)
+        preds = predicate_scores(sent_vecs, pred_vecs, neg_vecs, rubric["predicate_scoring"])
         j, rules, notes, dnotes = judge(rec, preds, rubric)
         c_score, c_flags = score_credibility(rec, rubric.get("credibility"))
         a_score, a_flags = score_availability(rec, rubric)
@@ -206,8 +193,9 @@ def main() -> None:
         return
 
     st.info(f"Ranking source: {source}. Loaded {len(candidates)} candidates.")
-    with st.spinner("Running VERDICT ranking..."):
-        rows = rank_sample(candidates, rubric)
+    with st.spinner("Loading CPU embedding model and running VERDICT ranking..."):
+        model = load_embedding_model()
+        rows = rank_sample(candidates, rubric, model)
     if not rows:
         st.warning("No uploaded candidates passed the hard gates.")
         return
